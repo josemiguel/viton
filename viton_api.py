@@ -170,7 +170,7 @@ class Model:
         )
         self.pipe.unet_encoder = UNet_Encoder
 
-    def _inference(self, user_id, human_img_url, garm_img_url, garment_des, denoise_steps=24, seed=42):
+    def _inference(self, user_id, human_img_url, garm_img_url, location, garment_des, denoise_steps=24, seed=42):
         device = "cuda"
 
         def url_to_pil(url):
@@ -190,7 +190,7 @@ class Model:
         keypoints = self.openpose_model(human_img.resize((384,512)))
         model_parse, _ = self.parsing_model(human_img.resize((384,512)))
 
-        mask, mask_gray = get_mask_location('hd', "upper_body", model_parse, keypoints)
+        mask, mask_gray = get_mask_location('hd', location, model_parse, keypoints)
         mask = mask.resize((768,1024))
 
         mask_gray = (1 - transforms.ToTensor()(mask)) * self.tensor_transfrom(human_img)
@@ -277,28 +277,17 @@ class Model:
         return img_byte_arr
 
     @method()
-    def inference(self, user_id, human_img_url, garm_img_url, prompt, denoise_steps=20, seed=42):
+    def inference(self, user_id, human_img_url, garm_img_url, location, prompt, denoise_steps=24, seed=42):
         return self._inference(
-                user_id, human_img_url, garm_img_url, prompt, denoise_steps, seed
+                user_id, human_img_url, garm_img_url, location,  prompt, denoise_steps, seed
         ).getvalue()
 
     @web_endpoint(docs=True)
     def web_inference(
-            self, user_id: str, human_img_url: str, garm_img_url: str, prompt: str, denoise_steps: int = 20, seed: int = 42):
+            self, user_id: str, human_img_url: str, garm_img_url: str, location: str, prompt: str, denoise_steps: int = 24, seed: int = 42):
         return Response(
             content=self._inference(
-                user_id, human_img_url, garm_img_url, prompt, denoise_steps, seed
+                user_id, human_img_url, garm_img_url, location, prompt, denoise_steps, seed
             ).getvalue(),
             media_type="image/jpeg",
         )
-
-@app.local_entrypoint()
-def main(prompt: str = ""):
-    image_bytes = Model().inference.remote("123", 
-                "https://onholy.com/model.jpg", 
-                "https://static.zara.net/assets/public/4717/1ee8/f1f34efca038/8ca426e91f0d/08372290043-e1/08372290043-e1.jpg?ts=1710318244848&w=850", prompt)
-
-    output_path = dir / "output.png"
-    print(f"Saving it to {output_path}")
-    with open(output_path, "wb") as f:
-        f.write(image_bytes)

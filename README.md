@@ -63,6 +63,7 @@ curl -s "https://your-modal-service-url/api/v1/tryon" \
     -d '{
         "human_img_url": "https://example.com/user.jpg",
         "garm_img_url": "https://example.com/clothing.jpg",
+        "location": "upper_body", #valid locations are: upper_body, lower_body and dresses 
         "prompt": "t-shirt",
         "user_id": "1234"
     }'
